@@ -12,7 +12,7 @@ from .simplest_by_tags import  predict as predict_by_tags
 async def get_images_scores(image_ids, pool):
 	scores = []
 	for imageid in image_ids:
-		async with pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
+		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
 			await cursor.execute('select score from images where id = %s', (imageid,))
 			async for row in cursor:
 				scores.append(row['score'])
@@ -26,7 +26,7 @@ async def learn(users_subset):
 
 	async def get_user_likes(userid):
 		likes = set()
-		async with pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
+		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
 			await cursor.execute('select * from image_likes where userid = %s', (userid,))
 			async for row in cursor:
 				likes.add(row['imageid'])

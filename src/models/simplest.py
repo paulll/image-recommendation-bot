@@ -6,7 +6,7 @@ from ..database import get_pool
 
 
 async def image_weights_task(liked_images_ids, userid, user_weight, image_weights, pool):
-	async with pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
+	with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
 		await cursor.execute("select * from image_likes where userid = %s", (userid,))
 		rows = await cursor.fetchall()
 		for row in rows:
@@ -27,7 +27,7 @@ async def predict(liked_images_ids, max_n=50, prod=True):
 	pool = await get_pool()
 	user_weights = Counter()
 	for imageid in liked_images_ids:
-		async with pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
+		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
 			await cursor.execute('select * from image_likes where imageid = %s', (imageid,))
 			async for row in cursor:
 				user_weights.update({row['userid']: 1})

@@ -57,12 +57,11 @@ async def handler(event):
 		# save like
 		if result:
 			pool = await get_pool()
-			async with pool.aquire() as db:
-				async with db.cursor() as cur:
-					await cur.execute('insert into local_likes (uid, imageid) values (%s, %s) on conflict do nothing', (
-						event.message.from_id, 
-						result
-					))
+			with (await pool.cursor()) as cur:
+				await cur.execute('insert into local_likes (uid, imageid) values (%s, %s) on conflict do nothing', (
+					event.message.from_id, 
+					result
+				))
 
 		if message.grouped_id and groups[message.grouped_id]:
 			groups[message.grouped_id] -= 1

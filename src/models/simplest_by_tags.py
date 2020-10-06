@@ -8,13 +8,13 @@ async def predict(liked_images_ids, max_n=50, prod=True):
 	pool = await get_pool()
 	tag_weights = Counter()
 	for imageid in liked_images_ids:
-		async with pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
+		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
 			await cursor.execute('select * from image_tags where imageid = %s', (imageid,))
 			async for row in cursor:
 				tag_weights.update({row['tagname']: 1})
 	image_weights = Counter()
 	for tagname, tag_weight in tag_weights:
-		async with pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
+		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
 			await cursor.execute('select * from image_tags where tagname = %s', (tagname,))
 			async for row in cursor:
 				image_weights.update(
