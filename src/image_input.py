@@ -1,7 +1,9 @@
 import asyncio
-import aiosqlite
+#import sqlalchemy as sa
+#from aiopg.sa import create_engine
 
 from .image_search import find_image_by_file, KnownShitException, UnknownShitException
+from .database import get_pool
 
 from aiofiles.os import remove
 from telethon import events, functions, Button
@@ -54,12 +56,13 @@ async def handler(event):
 
 		# save like
 		if result:
-			async with aiosqlite.connect('metadata.sqlite') as db:
-				await db.execute('replace into local_likes (uid, imageid) values (?, ?)', [
-					event.message.from_id, 
-					result
-				])
-				await db.commit()
+			pool = await get_pool()
+			async with pool.aquire() as db:
+				async with db.cursor() as cur:
+					await cur.execute('insert into local_likes (uid, imageid) values (%s, %s) on conflict do nothing', (
+						event.message.from_id, 
+						result
+					))
 
 		if message.grouped_id and groups[message.grouped_id]:
 			groups[message.grouped_id] -= 1
