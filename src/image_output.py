@@ -6,6 +6,8 @@ from time import time
 
 from .models import simplest
 from .client import client
+from .database import get_pool
+
 import psycopg2.extras
 
 post_interval = 60*60
@@ -61,8 +63,8 @@ async def post_worker():
 		time_start = time()
 		time_to_next_check = time_start + check_interval + random.uniform(0, jitter)
 		
-		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as users_cursor
-			await users_cursor.execute("select uid from local_users where last_post < %s", (post_interval + int(time()),)):
+		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as users_cursor:
+			await users_cursor.execute("select uid from local_users where last_post < %s", (post_interval + int(time()),))
 			async for user in users_cursor:
 				await process_user(pool, user)
 
