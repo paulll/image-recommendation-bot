@@ -22,8 +22,8 @@ post_interval = 60
 session = aiohttp.ClientSession()
 
 async def get_danbooru_photo(pic_id):
-	proxy = 'http://proxy-nossl.antizapret.prostovpn.org:29976'
-	post_info_response = await session.get('https://danbooru.donmai.us/posts/{}.json?'.format(pic_id), proxy=proxy)
+	#proxy = 'http://proxy-nossl.antizapret.prostovpn.org:29976'
+	post_info_response = await session.get('https://danbooru.donmai.us/posts/{}.json?'.format(pic_id))
 	post_info = await post_info_response.json()
 	return post_info['large_file_url']
 
