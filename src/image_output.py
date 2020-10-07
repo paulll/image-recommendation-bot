@@ -4,6 +4,9 @@ import aiohttp
 import aiopg
 from time import time
 
+from telethon import events, functions
+from telethon.tl.custom.button import Button
+
 from .models import simplest
 from .client import client
 from .database import get_pool
@@ -56,9 +59,9 @@ async def process_user(pool, user):
 					# todo: +more pics button
 					print('[output] uploading picture..')
 					buttons = [[
-						Button.inline('👍', bytes(f'L{rec}')), # 🔥
-						Button.inline('🤔', bytes(f'~{rec}')), # 
-						Button.inline('👎', bytes(f'D{rec}'))  # 💩
+						Button.inline('👍', bytes(f'L{rec}', encoding='utf8')), # 🔥
+						Button.inline('🤔', bytes(f'~{rec}', encoding='utf8')), # 
+						Button.inline('👎', bytes(f'D{rec}', encoding='utf8'))  # 💩
 					]]
 					await client.send_file(user['uid'], file, progress_callback=action, buttons=buttons)
 
@@ -79,6 +82,7 @@ async def handler_(event):
 		with (await pool.cursor()) as update_cursor:
 			await update_cursor.execute("update local_likes set type=%s where userid=%s and imageid=%s", (feedback, user['uid'], int(rec)))
 
+	await source_message.edit(buttons=[])
 	await event.answer()
 
 
