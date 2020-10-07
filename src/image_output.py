@@ -72,7 +72,7 @@ async def handler_(event):
 	post = int(event.data[1:].decode('ascii'))
 	feedback = event.data[:1].decode('ascii')
 	source_message = await event.get_message()
-	user = event.user_id
+	user = event.query.user_id
 
 	if feedback == 'D':
 		await source_message.delete()
