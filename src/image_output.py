@@ -35,7 +35,10 @@ async def get_danbooru_photo(pic_id):
 		return None
 	return post_info['large_file_url']
 
+
+awaiting_feedback = set()
 async def process_user(pool, user):
+	global awaiting_feedback
 	print('[output] checking user: {}'.format(user['uid']))
 	
 	with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as image_cursor:
@@ -44,10 +47,8 @@ async def process_user(pool, user):
 		user_likes = set(like['imageid'] for like in all_likes if like['type'] == 'L')
 		user_seen = set(like['imageid'] for like in all_likes)
 		print('[output] obtained {} likes'.format(len(user_likes)))
-		if len(user_likes) > 10:
-			print('[output] predicting likes..')
+		if len(user_likes) > 10 and user['uid'] not in awaiting_feedback:
 			recs = await simplest.predict(user_likes, user_seen, 1)
-			print('[output] predicted.')
 			for rec in recs:
 				async with client.action(user['uid'], 'photo') as action:
 					print('[output] obtaining danbooru pic url..')
@@ -69,6 +70,7 @@ async def process_user(pool, user):
 						Button.inline('👎', bytes(f'D{rec}', encoding='utf8'))  # 💩
 					]]
 					await client.send_file(user['uid'], file, progress_callback=action, buttons=buttons)
+					awaiting_feedback.add(user['uid'])
 
 @client.on(events.CallbackQuery)
 async def handler_(event):
@@ -89,6 +91,8 @@ async def handler_(event):
 
 	await source_message.edit(buttons=None)
 	await event.answer()
+	awaiting_feedback.remove(user)
+	await process_user(pool, {'uid': user})
 
 
 
