@@ -80,7 +80,7 @@ async def handler_(event):
 	pool = await get_pool()
 	if feedback != '~':
 		with (await pool.cursor()) as update_cursor:
-			await update_cursor.execute("update local_likes set type=%s where userid=%s and imageid=%s", (feedback, user, int(rec)))
+			await update_cursor.execute("update local_likes set type=%s where userid=%s and imageid=%s", (feedback, user, post))
 
 	await source_message.edit(buttons=[])
 	await event.answer()
