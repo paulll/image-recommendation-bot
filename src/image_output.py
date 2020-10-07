@@ -7,6 +7,7 @@ from time import time
 from telethon import events, functions
 from telethon.tl.custom.button import Button
 
+from .secrets import api_key
 from .models import simplest
 from .client import client
 from .database import get_pool
@@ -25,9 +26,13 @@ post_interval = 60
 session = aiohttp.ClientSession()
 
 async def get_danbooru_photo(pic_id):
+	global api_key
 	#proxy = 'http://proxy-nossl.antizapret.prostovpn.org:29976'
-	post_info_response = await session.get('https://danbooru.donmai.us/posts/{}.json?'.format(pic_id))
+	post_info_response = await session.get('https://danbooru.donmai.us/posts/{}.json?api_key={}'.format(pic_id, api_key))
 	post_info = await post_info_response.json()
+	if 'large_file_url' not in post_info:
+		print('[error] post_info broken:', post_info)
+		return None
 	return post_info['large_file_url']
 
 async def process_user(pool, user):
@@ -82,7 +87,7 @@ async def handler_(event):
 		with (await pool.cursor()) as update_cursor:
 			await update_cursor.execute("update local_likes set type=%s where uid=%s and imageid=%s", (feedback, user, post))
 
-	await source_message.edit(buttons=[])
+	await source_message.edit(buttons=None)
 	await event.answer()
 
 
