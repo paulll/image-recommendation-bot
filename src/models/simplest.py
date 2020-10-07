@@ -4,14 +4,13 @@ from collections import Counter, defaultdict
 
 from ..database import get_pool
 
-user_amounts_cache = dict()
+user_amounts_cache = None
 async def image_weights_task(liked_images_ids, userid, user_likes_intersection, image_weights, pool):
 	global user_amounts_cache
 	with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
 		await cursor.execute("select imageid from image_likes where userid = %s", (userid,))
 		rows = await cursor.fetchall()
 		user_weight = user_likes_intersection/(len(rows) + len(liked_images_ids) - user_likes_intersection)
-		user_amounts_cache[userid] = len(rows)
 		for row in rows:
 			image_weights.update({ row['imageid']: user_weight })
 
@@ -27,6 +26,13 @@ async def predict(liked_images_ids, seen, max_n=50, prod=True):
 	"""
 
 	global user_amounts_cache
+	if not user_amounts_cache:
+		user_amounts_cache = dict()
+		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
+			await cursor.execute('select userid,likes from user_like_amounts')
+			async for row in cursor:
+				user_amounts_cache[row['userid']] = row['likes']
+
 
 	pool = await get_pool()
 	user_likes_intersections = Counter()
@@ -41,9 +47,7 @@ async def predict(liked_images_ids, seen, max_n=50, prod=True):
 	tasks = []
 
 	user_weights = Counter( dict((user, intersections/(user_amounts_cache[user] + len(liked_images_ids) - intersections)) for user,intersections in user_likes_intersections.most_common() if user in user_amounts_cache))
-	top_users = list(x for x, _ in user_weights.most_common(400))
-	new_users = list(user for user in user_likes_intersections.keys() if user not in user_amounts_cache )
-	users_to_fetch = top_users + new_users
+	users_to_fetch = list(x for x, _ in user_weights.most_common(400))
 
 	for userid in users_to_fetch:
 		user_likes_intersection = user_likes_intersections[userid]
