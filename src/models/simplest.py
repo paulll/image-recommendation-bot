@@ -26,15 +26,15 @@ async def predict(liked_images_ids, seen, max_n=50, prod=True):
 	"""
 
 	global user_amounts_cache
+	pool = await get_pool()
+
 	if not user_amounts_cache:
 		user_amounts_cache = dict()
 		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
 			await cursor.execute('select userid,likes from user_like_amounts')
 			async for row in cursor:
 				user_amounts_cache[row['userid']] = row['likes']
-
-
-	pool = await get_pool()
+	
 	user_likes_intersections = Counter()
 	for imageid in liked_images_ids:
 		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
