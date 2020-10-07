@@ -2,6 +2,7 @@ import logging
 
 from src.client import client
 import src.start_handler
+import src.reset_handler
 import src.image_input
 import src.image_output
 

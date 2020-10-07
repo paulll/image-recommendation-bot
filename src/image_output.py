@@ -27,17 +27,18 @@ async def get_danbooru_photo(pic_id):
 	post_info = await post_info_response.json()
 	return post_info['large_file_url']
 
-
 async def process_user(pool, user):
 	print('[output] checking user: {}'.format(user['uid']))
 	
 	with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as image_cursor:
-		await image_cursor.execute("select imageid from local_likes where uid=%s", (user['uid'],))
-		user_likes = set(like['imageid'] for like in (await image_cursor.fetchall()))
+		await image_cursor.execute("select imageid,type from local_likes where uid=%s", (user['uid'],))
+		all_likes = await image_cursor.fetchall();
+		user_likes = set(like['imageid'] for like in all_likes if like['type'] == 'L')
+		user_seen = set(like['imageid'] for like in all_likes)
 		print('[output] obtained {} likes'.format(len(user_likes)))
 		if len(user_likes) > 10:
 			print('[output] predicting likes..')
-			recs = await simplest.predict(user_likes, 1)
+			recs = await simplest.predict(user_likes, user_seen, 1)
 			print('[output] predicted.')
 			for rec in recs:
 				async with client.action(user['uid'], 'photo') as action:
@@ -48,13 +49,39 @@ async def process_user(pool, user):
 					# mark in likes
 					with (await pool.cursor()) as update_cursor:
 						await update_cursor.execute("update local_users set last_post = %s where uid = %s", (int(time()), user['uid']))
-						await update_cursor.execute("insert into local_likes (uid, imageid) values (%s,%s) on conflict do nothing", (user['uid'], int(rec)))
+						await update_cursor.execute("insert into local_likes (uid, imageid, type) values (%s,%s,'~') on conflict do nothing", (user['uid'], int(rec)))
 					
 					# todo: feedback buttons (like / dislike)
 					# todo: +moar similiar button
 					# todo: +more pics button
 					print('[output] uploading picture..')
-					await client.send_file(user['uid'], file, progress_callback=action)
+					buttons = [[
+						Button.inline('👍', bytes(f'L{rec}')), # 🔥
+						Button.inline('🤔', bytes(f'~{rec}')), # 
+						Button.inline('👎', bytes(f'D{rec}'))  # 💩
+					]]
+					await client.send_file(user['uid'], file, progress_callback=action, buttons=buttons)
+
+@client.on(events.CallbackQuery)
+async def handler_(event):
+	print(event)
+	
+	post = int(event.data[1:].decode('ascii'))
+	feedback = event.data[:1].decode('ascii')
+	source_message = await event.get_message()
+	user = event.user_id
+
+	if feedback == 'D':
+		await source_message.delete()
+
+	pool = await get_pool()
+	if feedback != '~':
+		with (await pool.cursor()) as update_cursor:
+			await update_cursor.execute("update local_likes set type=%s where userid=%s and imageid=%s", (feedback, user['uid'], int(rec)))
+
+	await event.answer()
+
+
 
 
 async def post_worker():

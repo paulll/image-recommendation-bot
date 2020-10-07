@@ -58,7 +58,7 @@ async def handler(event):
 		if result:
 			pool = await get_pool()
 			with (await pool.cursor()) as cur:
-				await cur.execute('insert into local_likes (uid, imageid) values (%s, %s) on conflict do nothing', (
+				await cur.execute("insert into local_likes (uid, imageid, type) values (%s, %s, 'L') on conflict do nothing", (
 					event.message.from_id, 
 					result
 				))
