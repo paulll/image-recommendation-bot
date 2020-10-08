@@ -83,15 +83,15 @@ async def handler_(event):
 	source_message = await event.get_message()
 	user = event.query.user_id
 
-	if feedback == 'D':
-		await source_message.delete()
-
 	pool = await get_pool()
 	if feedback != '~':
 		with (await pool.cursor()) as update_cursor:
 			await update_cursor.execute("update local_likes set type=%s where uid=%s and imageid=%s", (feedback, user, post))
 
-	await source_message.edit(buttons=None)
+	if feedback == 'D':
+		await source_message.delete()
+	else:
+		await source_message.edit(buttons=None)
 	await event.answer()
 	users_lock.remove(user)
 	await process_user(pool, {'uid': user})
