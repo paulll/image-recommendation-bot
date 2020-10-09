@@ -11,7 +11,7 @@ from .jaccard_tags import  predict as predict_by_tags
 async def get_images_scores(image_ids):
 	scores = []
 	for imageid in image_ids:
-		async with execute(select(images.c.score).where(images.c.id==imageid)) as cursor:
+		async with execute(select([images.c.score]).where(images.c.id==imageid)) as cursor:
 			async for row in cursor:
 				scores.append(row.score)
 	return array(scores)
