@@ -1,47 +1,20 @@
-import random
 import asyncio
-import aiohttp
 import aiopg
-from time import time
-
-from telethon import events, functions
-from telethon.tl.custom.button import Button
-
-from .secrets import api_key
-from .models import simplest
-from .client import client
-from .database import get_pool
-
 import psycopg2.extras
 
-post_interval = 60*60
-check_interval = 60
-jitter = 60
+from time import time
+from telethon import events, functions
+from telethon.tl.custom.button import Button
+from collections import defaultdict
 
-# debug
-jitter, check_interval = 1, 5
-post_interval = 60
+from src.recommendation import tanimoto_users
+from src.client import client
+from src.database import get_pool
+from src.util.danbooru import get_picture 
 
-
-session = aiohttp.ClientSession()
-
-async def get_danbooru_photo(pic_id):
-	global api_key
-	#proxy = 'http://proxy-nossl.antizapret.prostovpn.org:29976'
-	post_info_response = await session.get('https://danbooru.donmai.us/posts/{}.json?api_key={}'.format(pic_id, api_key))
-	post_info = await post_info_response.json()
-	if 'large_file_url' not in post_info:
-		print('[error] post_info broken:', post_info)
-		return None
-	return post_info['large_file_url']
-
-
-users_lock = set()
+users_locks = defaultdict(asyncio.Lock)
 async def process_user(pool, user):
-	global users_lock
-	if user['uid'] in users_lock:
-		return
-	users_lock.add(user['uid'])
+	await users_locks[user].acquire()
 
 	print('[output] checking user: {}'.format(user['uid']))
 	with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as image_cursor:
@@ -51,11 +24,11 @@ async def process_user(pool, user):
 		user_seen = set(like['imageid'] for like in all_likes)
 		print('[output] obtained {} likes'.format(len(user_likes)))
 		if len(user_likes) > 10:
-			recs = await simplest.predict(user_likes, user_seen, 1)
+			recs = await tanimoto_users.predict(user_likes, user_seen, 1)
 			for rec in recs:
 				async with client.action(user['uid'], 'photo') as action:
 					print('[output] obtaining danbooru pic url..')
-					file = await get_danbooru_photo(rec)
+					file = await get_picture(rec)
 					print('[output] updating user data..')
 					
 					# mark in likes
@@ -63,9 +36,6 @@ async def process_user(pool, user):
 						await update_cursor.execute("update local_users set last_post = %s where uid = %s", (int(time()), user['uid']))
 						await update_cursor.execute("insert into local_likes (uid, imageid, type) values (%s,%s,'~') on conflict do nothing", (user['uid'], int(rec)))
 					
-					# todo: feedback buttons (like / dislike)
-					# todo: +moar similiar button
-					# todo: +more pics button
 					print('[output] uploading picture..')
 					buttons = [[
 						Button.inline('👍', bytes(f'L{rec}', encoding='utf8')), # 🔥
@@ -73,6 +43,7 @@ async def process_user(pool, user):
 						Button.inline('👎', bytes(f'D{rec}', encoding='utf8'))  # 💩
 					]]
 					await client.send_file(user['uid'], file, progress_callback=action, buttons=buttons)
+					users_locks[user].release()
 
 @client.on(events.CallbackQuery)
 async def handler_(event):
@@ -93,25 +64,15 @@ async def handler_(event):
 	else:
 		await source_message.edit(buttons=None)
 	await event.answer()
-	users_lock.remove(user)
 	await process_user(pool, {'uid': user})
-
-
 
 
 async def post_worker():
 	pool = await get_pool()
-	while True:
-		time_start = time()
-		time_to_next_check = time_start + check_interval + random.uniform(0, jitter)
-		
-		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as users_cursor:
-			await users_cursor.execute("select uid from local_users where last_post < %s", (post_interval + int(time()),))
-			async for user in users_cursor:
-				await process_user(pool, user)
+	with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as users_cursor:
+		await users_cursor.execute("select uid from local_users where last_post < %s", (post_interval + int(time()),))
+		async for user in users_cursor:
+			await process_user(pool, user)
 
-		time_end = time()
-		if time_end < time_to_next_check:
-			await asyncio.sleep(time_to_next_check - time_end)
 
 client.loop.create_task(post_worker())

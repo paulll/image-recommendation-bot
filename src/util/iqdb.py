@@ -1,12 +1,8 @@
 import aiohttp
-import asyncio
 import re
-import aiofiles
 
-from aiofiles.os import remove
 from os.path import normpath
 from pyquery import PyQuery as pq
-from .client import client
 
 from throttler import throttle_simultaneous
 

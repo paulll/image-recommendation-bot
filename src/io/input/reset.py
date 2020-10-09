@@ -2,8 +2,8 @@ import time
 import aiosqlite
 
 from telethon import events, functions
-from .client import client
-from .database import get_pool
+from src.client import client
+from src.database import get_pool
 
 
 @client.on(events.NewMessage)

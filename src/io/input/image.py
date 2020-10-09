@@ -1,14 +1,12 @@
 import asyncio
-#import sqlalchemy as sa
-#from aiopg.sa import create_engine
 
-from .image_search import find_image_by_file, KnownShitException, UnknownShitException
-from .database import get_pool
+from src.util.iqdb import find_image_by_file, KnownShitException, UnknownShitException
+from src.database import get_pool
+from src.client import client
 
 from aiofiles.os import remove
 from telethon import events, functions, Button
 from telethon.tl.types import MessageMediaPhoto
-from .client import client
 
 groups = dict()
 group_replies = dict()

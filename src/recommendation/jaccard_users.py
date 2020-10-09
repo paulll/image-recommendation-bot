@@ -1,19 +1,17 @@
 import asyncio
-import psycopg2.extras
 from collections import Counter, defaultdict
 
-from ..database import get_pool
+from sqlalchemy import select
+from src.database import execute, image_likes, user_like_amounts
 
-user_amounts_cache = None
-async def image_weights_task(liked_images_ids, userid, user_likes_intersection, image_weights, pool):
-	global user_amounts_cache
-	with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
-		await cursor.execute("select imageid from image_likes where userid = %s", (userid,))
+async def image_weights_task(liked_images_ids, userid, user_likes_intersection, image_weights):
+	async with execute(select([image_likes.c.imageid]).where(image_likes.c.userid == userid)) as cursor:
 		rows = await cursor.fetchall()
 		user_weight = user_likes_intersection/(len(rows) + len(liked_images_ids) - user_likes_intersection)
 		for row in rows:
-			image_weights.update({ row['imageid']: user_weight })
+			image_weights.update({ row.imageid: user_weight })
 
+user_amounts_cache = None
 async def predict(liked_images_ids, seen, max_n=50, prod=True):
 	"""
 	Predict liked images via collaborative filtering with jaccard index
@@ -26,21 +24,17 @@ async def predict(liked_images_ids, seen, max_n=50, prod=True):
 	"""
 
 	global user_amounts_cache
-	pool = await get_pool()
-
 	if not user_amounts_cache:
 		user_amounts_cache = dict()
-		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
-			await cursor.execute('select userid,likes from user_like_amounts')
+		async with execute(user_like_amounts.select()) as cursor:
 			async for row in cursor:
-				user_amounts_cache[row['userid']] = row['likes']
+				user_amounts_cache[row.userid] = row.likes
 	
 	user_likes_intersections = Counter()
 	for imageid in liked_images_ids:
-		with (await pool.cursor(cursor_factory=psycopg2.extras.RealDictCursor)) as cursor:
-			await cursor.execute('select userid from image_likes where imageid = %s', (imageid,))
+		async with execute(select([image_likes.c.userid]).where(image_likes.c.imageid==imageid)) as cursor:
 			async for row in cursor:
-				user_likes_intersections.update({row['userid']: 1})
+				user_likes_intersections.update({row.userid: 1})
 	print('[predict] users: {}'.format(len(user_likes_intersections)))
 	
 	image_weights = Counter()
@@ -51,7 +45,7 @@ async def predict(liked_images_ids, seen, max_n=50, prod=True):
 
 	for userid in users_to_fetch:
 		user_likes_intersection = user_likes_intersections[userid]
-		tasks.append(image_weights_task(liked_images_ids, userid, user_likes_intersection, image_weights, pool))
+		tasks.append(image_weights_task(liked_images_ids, userid, user_likes_intersection, image_weights))
 	while True:
 		done, pending = await asyncio.wait(tasks, timeout=2)
 		tasks = pending

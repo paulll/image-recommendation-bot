@@ -3,10 +3,10 @@ from collections import Counter, defaultdict
 from sklearn.linear_model import LogisticRegression
 from numpy import array, vstack, hstack
 
-from ..database import get_pool
+from src.database import get_pool
 
-from .simplest import predict as predict_by_users
-from .simplest_by_tags import  predict as predict_by_tags
+from .tanimoto_users import predict as predict_by_users
+from .tanimoto_tags import  predict as predict_by_tags
 
 
 async def get_images_scores(image_ids, pool):
