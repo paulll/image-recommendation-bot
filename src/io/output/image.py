@@ -1,5 +1,6 @@
 import asyncio
 import aiopg
+import random
 import psycopg2.extras
 
 from time import time
@@ -9,7 +10,7 @@ from collections import defaultdict
 from sqlalchemy import select, update
 
 from src.database import execute, local_likes, local_users
-from src.recommendation import jaccard_tags as predictor
+from src.recommendation import jaccard_combination as predictor
 from src.client import client
 from src.util.danbooru import get_picture 
 
@@ -66,6 +67,8 @@ async def handler_(event):
 	await process_user(user)
 
 async def post_worker():
+	learn_users = random.choices(range(0,100_000), k=100)
+	await predictor.learn(learn_users)
 	async with execute(select([local_users.c.uid])) as users_cursor:
 		async for user in users_cursor:
 			await process_user(user.uid)

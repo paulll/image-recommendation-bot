@@ -1,7 +1,6 @@
 pillow
 asyncio
 aiohttp
-aiosqlite
 aiofiles
 telethon
 pyquery
@@ -9,3 +8,4 @@ aiodns
 cchardet
 brotlipy
 ujson
+aiopg

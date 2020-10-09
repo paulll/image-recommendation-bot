@@ -41,7 +41,7 @@ async def predict(liked_images_ids, seen, max_n=50, prod=True):
 	tasks = []
 
 	tag_weights = Counter( dict((tag, intersections/(tag_amounts_cache[tag] + len(liked_images_ids) - intersections)) for tag,intersections in tag_likes_intersections.most_common() if tag in tag_amounts_cache))
-	tags_to_fetch = list(x for x, _ in tag_weights.most_common(4000))
+	tags_to_fetch = list(x for x, _ in tag_weights.most_common(60))
 
 	for tagname in tags_to_fetch:
 		tag_likes_intersection = tag_likes_intersections[tagname]
