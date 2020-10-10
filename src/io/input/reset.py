@@ -11,5 +11,5 @@ async def handler(event):
 	message = event.message
 	if message.message.startswith('/reset'):
 		msg = await message.respond("Секунду.. последнюю картинку обработаю")
-		await execute(local_likes.delete().where(local_likes.uid == message.from_id))
+		await execute(local_likes.delete().where(local_likes.c.uid == message.from_id))
 		await msg.edit("Окей, я всё забыл. Давай по-новой")

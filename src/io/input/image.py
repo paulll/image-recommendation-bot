@@ -1,7 +1,7 @@
 import asyncio
 
 from src.util.iqdb import find_image_by_file, KnownShitException, UnknownShitException
-from src.util.deepdanbooru import get_tags_by_file
+#from src.util.deepdanbooru import get_tags_by_file
 from src.database import execute, local_likes
 from src.client import client
 

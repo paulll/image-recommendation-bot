@@ -79,9 +79,15 @@ async def handler_(event):
 async def post_worker():
 	#learn_users = random.choices(range(0,100_000), k=100)
 	#await predictor.learn(learn_users)
-	async with execute(select([local_users.c.uid])) as users_cursor:
-		async for user in users_cursor:
-			await process_user(user.uid)
+	processed_users = set()
+	while True:
+		async with execute(select([local_users.c.uid])) as users_cursor:
+			async for user in users_cursor:
+				if user in processed_users:
+					continue
+				await process_user(user.uid)
+				processed_users.add(user)
+			await asyncio.sleep(10)
 
 
 

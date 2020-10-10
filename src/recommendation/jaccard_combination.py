@@ -80,9 +80,10 @@ async def predict(liked_images_ids, seen, max_n=50):
 	avg_tag_w = mean(st_tag_w)
 	avg_score = mean(st_scores)
 
-	proba = Counter()
+	proba_dict = {}
 	for image, features in features_dict.items():
-		proba[image] = features[0]/avg_usr_w + features[1]/avg_tag_w*1.6 + features[0]/avg_score*0.4
+		proba_dict[image] = features[0]/avg_usr_w + features[1]/avg_tag_w*1.6 + features[0]/avg_score*0.4
+	proba = Counter(proba_dict)
 
 	parsed_images = len(st_scores)
 	print(f'= [{avg_usr_w}]*{parsed_images}, [{avg_tag_w}]*{parsed_images}, [{avg_score}]*{parsed_images}')

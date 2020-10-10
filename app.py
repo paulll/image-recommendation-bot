@@ -2,9 +2,9 @@ import logging
 
 from src.client import client
 
-#import src.io.input.image
-#import src.io.input.reset
-#import src.io.input.start
+import src.io.input.image
+import src.io.input.reset
+import src.io.input.start
 
 import src.io.output.image
 
