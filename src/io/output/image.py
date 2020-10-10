@@ -1,7 +1,6 @@
 import asyncio
 import aiopg
 import random
-import psycopg2.extras
 
 from time import time
 from telethon import events, functions
@@ -44,8 +43,19 @@ async def process_user(user):
 						Button.inline('🤔', bytes(f'~{rec}', encoding='utf8')), # 
 						Button.inline('👎', bytes(f'D{rec}', encoding='utf8'))  # 💩
 					]]
-					await client.send_file(user, file, progress_callback=action, buttons=buttons)
+					for i in range(5):
+						try:
+							await client.send_file(user, file, progress_callback=action, buttons=buttons)
+							users_locks[user].release()
+							return
+						except Exception as e:
+							print(e)
+							print('retrying...')
+							continue
+					print('..failed, trying next picture')
 					users_locks[user].release()
+					await process_user(user)
+					
 
 @client.on(events.CallbackQuery)
 async def handler_(event):
@@ -67,8 +77,8 @@ async def handler_(event):
 	await process_user(user)
 
 async def post_worker():
-	learn_users = random.choices(range(0,100_000), k=100)
-	await predictor.learn(learn_users)
+	#learn_users = random.choices(range(0,100_000), k=100)
+	#await predictor.learn(learn_users)
 	async with execute(select([local_users.c.uid])) as users_cursor:
 		async for user in users_cursor:
 			await process_user(user.uid)

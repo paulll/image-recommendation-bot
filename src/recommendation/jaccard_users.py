@@ -11,6 +11,7 @@ async def image_weights_task(liked_images_ids, userid, user_likes_intersection, 
 		for row in rows:
 			image_weights.update({ row.imageid: user_weight })
 
+
 user_amounts_cache = None
 async def predict(liked_images_ids, seen, max_n=50, prod=True):
 	"""
@@ -54,4 +55,4 @@ async def predict(liked_images_ids, seen, max_n=50, prod=True):
 		print('[predict] {} users left'.format(len(tasks)))
 	if prod:
 		return list(x for x, _ in image_weights.most_common() if x not in seen)[:max_n]
-	return image_weights.most_common(max_n)
+	return list((x,y) for x,y in image_weights.most_common() if x not in seen)[:max_n]

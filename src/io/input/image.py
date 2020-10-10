@@ -1,7 +1,8 @@
 import asyncio
 
 from src.util.iqdb import find_image_by_file, KnownShitException, UnknownShitException
-from src.database import get_pool
+from src.util.deepdanbooru import get_tags_by_file
+from src.database import execute, local_likes
 from src.client import client
 
 from aiofiles.os import remove
@@ -54,13 +55,12 @@ async def handler(event):
 
 		# save like
 		if result:
-			pool = await get_pool()
-			with (await pool.cursor()) as cur:
-				await cur.execute("insert into local_likes (uid, imageid, type) values (%s, %s, 'L') on conflict do nothing", (
-					event.message.from_id, 
-					result
-				))
-
+			await execute(local_likes.insert({
+				'uid': event.message.from_id,
+				'imageid': result,
+				'type': 'L'
+			}))
+			
 		if message.grouped_id and groups[message.grouped_id]:
 			groups[message.grouped_id] -= 1
 			if groups[message.grouped_id] == 0:

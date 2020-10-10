@@ -3,7 +3,7 @@ import aiosqlite
 
 from telethon import events, functions
 from src.client import client
-from src.database import get_pool
+from src.database import execute, local_users
 
 start_text = """
 Привет!
@@ -15,7 +15,8 @@ start_text = """
 async def handler(event):
 	message = event.message
 	if message.message.startswith('/start'):
-		pool = await get_pool()	
-		with (await pool.cursor()) as cursor:
-			await cursor.execute("insert into local_users (uid, last_post) values (%s,%s) on conflict do nothing", (message.from_id, 0))
+		await execute(local_users.insert({
+			'uid': message.from_id,
+			'last_post': 0
+		}))
 		await message.respond(start_text)
