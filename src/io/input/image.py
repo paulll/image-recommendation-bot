@@ -45,7 +45,7 @@ async def handler(event):
 			pass
 		except Exception as e:
 			print(e)
-			await asyncio.sleep(60*5)
+			await asyncio.sleep(30)
 			try:
 				result = await find_image_by_file(file)
 			except Exception:
